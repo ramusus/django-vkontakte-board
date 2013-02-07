@@ -1,4 +1,3 @@
-django-vkontakte-board
-======================
+#### Вступление
 
-Django implementation for vkontakte API Board
+Приложение позволяет взаимодействовать с дисскуссиями Вконтакте через Вконтакте API используя стандартные модели Django
