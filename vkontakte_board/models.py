@@ -6,7 +6,8 @@ from django.utils.translation import ugettext as _
 from datetime import datetime
 from vkontakte_api.utils import api_call, VkontakteError
 from vkontakte_api import fields
-from vkontakte_api.models import VkontakteManager, VkontakteIDModel
+from vkontakte_api.models import VkontakteManager, VkontakteIDModel, VkontakteModel
+from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 from dateutil import parser
@@ -15,28 +16,19 @@ import logging
 
 log = logging.getLogger('vkontakte_board')
 
-#VKONTAKTE_USERS_INFO_TIMEOUT_DAYS = getattr(settings, 'VKONTAKTE_USERS_INFO_TIMEOUT_DAYS', 0)
-#
-#USER_SEX_CHOICES = ((1, u'жен.'),(2, u'муж.'))
-#USER_RELATION_CHOICES = (
-#    (1, u'Не женат / замужем'),
-#    (2, u'Есть друг / подруга'),
-#    (3, u'Помолвлен / помолвлена'),
-#    (4, u'Женат / замужем'),
-#    (5, u'Всё сложно'),
-#    (6, u'В активном поиске'),
-#    (7, u'Влюблён / влюблена'),
-#)
-#
-#USER_PHOTO_DEACTIVATED_URL = 'http://vk.com/images/deactivated_b.gif'
-#USER_NO_PHOTO_URL = 'http://vkontakte.ru/images/camera_a.gif'
-#
+class CommentManager(models.Manager):
+    pass
+
 class TopicManager(models.Manager):
     pass
 
 class TopicRemoteManager(VkontakteManager):
 
-    def fetch(self, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
+    @fetch_all(return_all=lambda k: k['group'].topics.all())
+    def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
+        #gid
+        #ID группы, список тем которой необходимо получить.
+        kwargs['gid'] = group.remote_id
         #tids
         #Список идентификаторов тем, которые необходимо получить (не более 100). По умолчанию возвращаются все темы. Если указан данный параметр, игнорируются параметры order, offset и count (возвращаются все запрошенные темы в указанном порядке).
         if ids and isinstance(ids, (list, tuple)):
@@ -68,7 +60,8 @@ class TopicRemoteManager(VkontakteManager):
         #Количество символов, по которому нужно обрезать первое и последнее сообщение. Укажите 0, если Вы не хотите обрезать сообщение. (по умолчанию 90).
         kwargs['preview_length'] = int(preview_length)
 
-        super(TopicRemoteManager, self).fetch(**kwargs)
+        kwargs['extra_fields'] = {'group_id': group.id}
+        return super(TopicRemoteManager, self).fetch(**kwargs)
 
     def get(self, *args, **kwargs):
         '''
@@ -76,36 +69,86 @@ class TopicRemoteManager(VkontakteManager):
         '''
         response_list = self.api_call(*args, **kwargs)
 
-        users = User.remote.parse_response_list(response_list['users'])
-        print users
+        if 'users' in response_list:
+            users = User.remote.parse_response_list(response_list['users'])
+            for instance in users:
+                instance.fetched = datetime.now()
+                user = User.remote.get_or_create_from_instance(instance)
+
         return self.parse_response_list(response_list['topics'])
 
-class Topic(VkontakteIDModel):
-    '''
-    '''
+class CommentRemoteManager(VkontakteManager):
+
+    @fetch_all(return_all=lambda k: k['topic'].comments.all())
+    def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
+        #gid
+        #ID группы, к обсуждениям которой относится указанная тема.
+        kwargs['gid'] = topic.group.remote_id
+        #tid
+        #ID темы в группе
+        kwargs['tid'] = topic.remote_id.split('_')[1]
+        #extended
+        #Если указать в качестве этого параметра 1, то будет возвращена информация о пользователях, являющихся авторами сообщений. По умолчанию 0.
+        kwargs['extended'] = int(extended)
+        #offset
+        #Смещение, необходимое для выборки определенного подмножества сообщений.
+        kwargs['offset'] = int(offset)
+        #count
+        #Количество сообщений, которое необходимо получить (но не более 100). По умолчанию 20.
+        kwargs['count'] = int(count)
+
+        kwargs['extra_fields'] = {'topic_id': topic.id}
+        return super(CommentRemoteManager, self).fetch(**kwargs)
+
+    def get(self, *args, **kwargs):
+        '''
+        Retrieve objects from remote server
+        '''
+        response_list = self.api_call(*args, **kwargs)
+
+#        if 'users' in response_list:
+#            users = User.remote.parse_response_list(response_list['users'])
+#            for instance in users:
+#                instance.fetched = datetime.now()
+#                user = User.remote.get_or_create_from_instance(instance)
+
+        return self.parse_response_list(response_list['comments'])
+
+class BoardAbstractModel(VkontakteModel):
+    class Meta:
+        abstract = True
+
+    methods_namespace = 'board'
+
+    remote_id = models.CharField(u'ID', max_length='20', help_text=u'Уникальный идентификатор', unique=True)
+
+    @property
+    def slug(self):
+        return self.slug_prefix + str(self.remote_id)
+
+class Topic(BoardAbstractModel):
     class Meta:
         db_table = 'vkontakte_board_topic'
-        verbose_name = _('Vkontakte group topic')
-        verbose_name_plural = _('Vkontakte group topics')
+        verbose_name = 'Дискуссия групп Вконтакте'
+        verbose_name_plural = 'Дискуссии групп Вконтакте'
         ordering = ['remote_id']
 
     remote_pk_field = 'tid'
-    methods_namespace = 'boards'
-    slug_prefix = 'board'
+    slug_prefix = 'topic'
 
-    group = models.ForeignKey(Group, verbose_name=u'Группа')
+    group = models.ForeignKey(Group, verbose_name=u'Группа', related_name='topics')
 
     title = models.CharField(u'Заголовок', max_length=500)
-    created = models.DateTimeField(help_text=u'Дата создания')
-    updated = models.DateTimeField(null=True, help_text=u'дата последнего сообщения')
+    created = models.DateTimeField(u'Дата создания')
+    updated = models.DateTimeField(u'Дата последнего сообщения', null=True)
 
-    created_by = models.ForeignKey(User, verbose_name=u'Пользователь, создавшего тему')
-    updated_by = models.ForeignKey(User, verbose_name=u'Пользователь, оставившего последнее сообщение')
+    created_by = models.ForeignKey(User, related_name='topics_created', verbose_name=u'Пользователь, создавший тему')
+    updated_by = models.ForeignKey(User, related_name='topics_updated', verbose_name=u'Пользователь, оставивший последнее сообщение')
 
     is_closed = models.BooleanField(u'Закрыта?', help_text=u'Тема является закрытой (в ней нельзя оставлять сообщения)')
     is_fixed = models.BooleanField(u'Прикреплена?', help_text=u'Тема является прилепленной (находится в начале списка тем)')
 
-    comments = models.PositiveIntegerField(u'Число сообщений в теме')
+    comments_count = models.PositiveIntegerField(u'Число сообщений в теме')
 
     first_comment = models.TextField(u'Текст первого сообщения')
     last_comment = models.TextField(u'Текст последнего сообщения')
@@ -115,14 +158,54 @@ class Topic(VkontakteIDModel):
         'get': 'getTopics',
     })
 
-
     def __unicode__(self):
         return self.title
 
+    def parse(self, response):
+        self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
+        self.updated_by = User.objects.get_or_create(remote_id=response.pop('updated_by'))[0]
+        if 'comments' in response:
+            response['comments_count'] = response.pop('comments')
+
+        super(Topic, self).parse(response)
+
+    def save(self, *args, **kwargs):
+        # it's here, because self.post is not in API response
+        if '_' not in str(self.remote_id):
+            self.remote_id = '-%s_%s' % (self.group.remote_id, self.remote_id)
+        return super(Topic, self).save(*args, **kwargs)
+
     def fetch_comments(self, *args, **kwargs):
-        pass
-#        if 'vkontakte_wall' in settings.INSTALLED_APPS:
-#            from vkontakte_wall.models import Post
-#            return Post.remote.fetch_user_wall(self, *args, **kwargs)
-#        else:
-#            raise ImproperlyConfigured("Application 'vkontakte_wall' not in INSTALLED_APPS")
+        return Comment.remote.fetch(topic=self, *args, **kwargs)
+
+class Comment(BoardAbstractModel):
+    class Meta:
+        db_table = 'vkontakte_board_comment'
+        verbose_name = _('Vkontakte group topic comment')
+        verbose_name_plural = _('Vkontakte group topic comments')
+        ordering = ['remote_id']
+
+    slug_prefix = 'topic'
+
+    topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
+    author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор сообщения')
+    date = models.DateTimeField(help_text=u'Дата создания')
+    text = models.TextField(u'Текст сообщения')
+    #attachments - присутствует только если у сообщения есть прикрепления, содержит массив объектов (фотографии, ссылки и т.п.). Более подробная информация представлена на странице Описание поля attachments
+
+    objects = CommentManager()
+    remote = CommentRemoteManager(remote_pk=('remote_id',), methods={
+        'get': 'getComments',
+    })
+
+#    def __unicode__(self):
+#        return self.text
+
+    def parse(self, response):
+        # TODO: add parsing attachments and polls
+        if 'attachments' in response:
+            response.pop('attachments')
+        if 'poll' in response:
+            response.pop('poll')
+        self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
+        super(Comment, self).parse(response)

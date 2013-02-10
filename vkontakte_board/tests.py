@@ -1,64 +1,17 @@
 # -*- coding: utf-8 -*-
 from django.test import TestCase
-from models import Topic
+from models import Topic, User, Comment
+from factories import TopicFactory
+from vkontakte_groups.factories import GroupFactory
 import simplejson as json
+from datetime import datetime
+
+GROUP_ID = 16297716
+TOPIC_ID = '-16297716_26523718'
 
 class VkontakteBoardTest(TestCase):
-    pass
 
-#    def test_fetch_user_relatives(self):
-#
-#        users = User.remote.fetch(ids=[1,6])
-#
-#        self.assertEqual(users[0].relatives.count(), 0)
-#
-#        users = User.remote.fetch(ids=[1,6])
-#
-#        self.assertEqual(users[0].relatives.count(), 1) # fix it, design decision needed
-#        self.assertEqual(users[0].relatives.all()[0], users[1])
-#
-#    def test_fetch_user_friends(self):
-#
-#        self.assertEqual(User.objects.count(), 0)
-#        user = User.remote.fetch(ids=[6])[0]
-#        self.assertEqual(User.objects.count(), 1)
-#        user.fetch_friends()
-#        self.assertTrue(User.objects.count() > 100)
-#        self.assertEqual(user.friends_users.count(), User.objects.count()-1)
-#
-#    def test_fetch_user(self):
-#
-#        self.assertEqual(User.objects.count(), 0)
-#        users = User.remote.fetch(ids=[1,2])
-#        self.assertEqual(len(users), 2)
-#        self.assertEqual(User.objects.count(), 2)
-#
-#        self.assertEqual(users[0].remote_id, 1)
-#        self.assertEqual(users[0].first_name, u'Павел')
-#        self.assertEqual(users[0].last_name, u'Дуров')
-#        self.assertEqual(users[0].twitter, u'durov')
-#        self.assertEqual(users[0].livejournal, u'durov')
-#        self.assertTrue(len(users[0].activity) > 0)
-#        self.assertEqual(users[0].relation, 1)
-#        self.assertEqual(users[0].wall_comments, False)
-#
-#        # test counters
-#        users[0].update_counters()
-#        self.assertTrue(users[0].followers > 0)
-#        self.assertTrue(users[0].notes > 0)
-#        self.assertTrue(users[0].sum_counters > 0)
-#        self.assertTrue(users[0].counters_updated is not None)
-#
-#        # fetch another time
-#        users = User.remote.fetch(ids=[1,2])
-#        self.assertEqual(User.objects.count(), 2)
-#
-#        # test for keeping old counters
-#        self.assertTrue(users[0].sum_counters > 0)
-#        self.assertTrue(users[0].followers > 0)
-#        self.assertTrue(users[0].counters_updated is not None)
-#
-    def test_parse_user(self):
+    def test_parse_topic(self):
 
         response = '''
             {"response":{
@@ -71,13 +24,14 @@ class VkontakteBoardTest(TestCase):
                 "updated_by":1,
                 "is_closed":0,
                 "is_fixed":1,
-                "comments":5045},
+                "comments":5045}
             ]
             }}'''
         instance = Topic.remote.parse_response_list(json.loads(response)['response']['topics'])[0]
+        instance.group = GroupFactory.create(remote_id=GROUP_ID)
         instance.save()
 
-        self.assertEqual(instance.remote_id, 51443905)
+        self.assertEqual(instance.remote_id, '-%s_51443905' % GROUP_ID)
         self.assertEqual(instance.title, u'Вопросы по поводу создания приложений')
         self.assertEqual(instance.created, datetime(2011,2,22,12,0,0))
         self.assertEqual(instance.created_by, User.objects.get(remote_id=1))
@@ -85,26 +39,40 @@ class VkontakteBoardTest(TestCase):
         self.assertEqual(instance.updated_by, User.objects.get(remote_id=1))
         self.assertEqual(instance.is_closed, False)
         self.assertEqual(instance.is_fixed, True)
-        self.assertEqual(instance.comments, 5045)
+        self.assertEqual(instance.comments_count, 5045)
 
+    def test_parse_comment(self):
 
-#    def test_bad_activity(self):
-#
-#        bad_activity = u'\u7b7e\u8b49\u10e1\u502c\udd0c\u9387\ud157\uaf0c\ub348\ua8b7\uf0c7\uca16\ufd54\u3fb8\uabbd\u9b3c\u8329\u5630\uee9e\u5b81\u5976\u1c90\u7916\u56b9\u49fc\u4884\ua6b8\u3a6c\u6160\u1c6e\u1da1\udfe5\u254a\u25e3\ua933\u7e2f\u92c6\ubd1b\u9877\u2a56\uf3c6\uc03c\u5036\u336b\uef31\u3caf\u5c3c\ucba3\u0ad0\uca00\u9552\u7f4e\u2e4e\u5d24\u4b7c\ucf0e\u41ba\u20e2\u0d32\u1d81\ue82e\uc009\u2fad\udb67\ue8b2\ua3f2\ub71c\uc631\u9ad8\u3abd\u0364\u70d7\uc49c\u0d95\u02ec\u65c4\ucc5c\udee7\u45ca\ufe2a\u38a5\uca5f\uc398\ue37e\u117b\xd5\ua3e5\ue2bc\u8aab\u53df\ua98f\u580f\uc1c5\u66bc\u6d24\uacae\u3115\uc1d6\ufdfd\uadee\u71f6\u5c62\u9e9e\u685a\u9939\ud8e8\u191f\u96b5\u7a62\u7598\ud1e3\u4e39\u5328\u63c9\u808b\u5265\u9890\uaa48\u88dc\u6b67\u7b24\u8d70\ufdb1\ua387\u0747\u80a9\u9eb6\uea60\u8f56\u6ae2\u862c\u201c\u2eb8\u1fda\ufd58\u7d90\u0cd8\u2231\u0fc9\ucfd3'
-#        User.objects.create(remote_id=1, activity=bad_activity, sex=0)
-#        self.assertEqual(User.objects.count(), 1)
-#        self.assertEqual(User.objects.all()[0].activity, '')
-#
-#        good_activity = u'Хорошая строка, good string'
-#        User.objects.create(remote_id=2, activity=good_activity, sex=0)
-#        self.assertEqual(User.objects.count(), 2)
-#        self.assertEqual(User.objects.all()[1].activity, good_activity)
-#
-#    def test_multiple_slug_users(self):
-#
-#        User.objects.create(remote_id=173613533, screen_name='mikhailserzhantov', sex=0)
-#        User.objects.create(remote_id=174221855, screen_name='mikhailserzhantov', sex=0)
-#        User.objects.create(remote_id=182224356, screen_name='mikhailserzhantov', sex=0)
-#
-#        self.assertEqual(User.remote.get_by_slug('mikhailserzhantov').remote_id, 182224356)
-#        self.assertEqual(User.objects.deactivated().count(), 2)
+        response = '''
+            {"response":{"comments":[5045,{
+                "id":11374,
+                "from_id":189814,
+                "date":1298365200,
+                "text":"При возникновении любых вопросов, связанных с разработкой приложений, в первую очередь следует обратиться к FAQ в группе &quot;Приложения на основе ВКонтакте API&quot;:<br>http:\/\/vkontakte.ru\/pages.php?id=4143397<br><br>В той же группе есть тема &quot;Обмен опытом&quot; (http:\/\/vkontakte.ru\/topic-2226515_3507340), которая тоже крайне рекомендуется к ознакомлению.<br><br>Если вышеозначенные ссылки не помогли - можно задать вопрос здесь.<br><br>Задавать вопросы в духе &quot;я ничего не понял, объясните кто-нибудь в личке&quot; не следует, они будут удаляться.<br><br>Не следует также задавать вопросы, относящиеся не к разработке, а к работе конкретных приложений - обращайтесь в официальные группы этих приложений."
+                },{"id":11378,"from_id":51550980,"date":1260721960,"text":"Возможно ли будет в будущем в контейнере вызвать showInviteBox с массивом уже отмеченных для приглашения друзей?"},{"id":11382,"from_id":1775328,"date":1260722859,"text":"Не совсем понял где писать, но решил написать здесь ... буквально неделю назад моё приложение заблокировали, а в причине написали нарушение правил пункт 5 в подписи. исправил, это не сложно, все возобновили.. НО.. ведь подобные нарушения замечены почти у всех приложений......<br>даже у таких популярных как это<br>http:\/\/vkontakte.ru\/app630896<br><br>вопрос. неужели правила не для всех едины?"},{"id":11394,"from_id":3908342,"date":1260729642,"text":"Егор Bicoz Филиппов, иногда администрация делает исключения на ссылки, которые ведут на официальные форумы.<br><br>Насколько помню, то сообщение от администрации было примерно такого плана: &quot;мы можем сделать исключения только в тех случаях, когда возможностей групп вконтакте недостаточно для поддержки приложения&quot;. Что-то типа того.<br><br>З.Ы. Егор и другие пользователи, которые будут выкладывать ссылки на приложения, убирайте пожалуйста реф-часть."}]}}'''
+        instance = Comment.remote.parse_response_list(json.loads(response)['response']['comments'])[0]
+        instance.topic = TopicFactory.create()
+        instance.save()
+
+        self.assertEqual(instance.remote_id, 11374)
+        self.assertEqual(instance.from_id, User.objects.get(remote_id=189814))
+        self.assertEqual(instance.date, datetime(2011,2,22,12,0,0))
+        self.assertTrue(len(instance.text) > 10)
+
+    def test_fetching_topics(self):
+
+        group = GroupFactory.create(remote_id=GROUP_ID)
+        group.fetch_topics()
+
+        self.assertTrue(group.topics.count() > 10)
+
+    def test_fetching_comments(self):
+
+        group = GroupFactory.create(remote_id=GROUP_ID)
+        topic = TopicFactory.create(remote_id=TOPIC_ID, group=group)
+
+        topic.fetch_comments()
+        self.assertEqual(topic.comments.count(), 20)
+
+        topic.fetch_comments(all=True)
+        self.assertTrue(topic.comments.count() > 20)
