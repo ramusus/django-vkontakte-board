@@ -24,7 +24,7 @@ class TopicManager(models.Manager):
 
 class TopicRemoteManager(VkontakteManager):
 
-    @fetch_all(return_all=lambda k: k['group'].topics.all())
+    @fetch_all(return_all=lambda group,*a,**k: group.topics.all())
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
         #gid
         #ID группы, список тем которой необходимо получить.
@@ -63,23 +63,18 @@ class TopicRemoteManager(VkontakteManager):
         kwargs['extra_fields'] = {'group_id': group.id}
         return super(TopicRemoteManager, self).fetch(**kwargs)
 
-    def get(self, *args, **kwargs):
-        '''
-        Retrieve objects from remote server
-        '''
-        response_list = self.api_call(*args, **kwargs)
+    def parse_response_list(self, response_list, extra_fields=None):
+        if isinstance(response_list, dict):
+            if 'users' in response_list:
+                users = User.remote.parse_response_list(response_list['users'], {'fetched': datetime.now()})
+                for instance in users:
+                    user = User.remote.get_or_create_from_instance(instance)
 
-        if 'users' in response_list:
-            users = User.remote.parse_response_list(response_list['users'])
-            for instance in users:
-                instance.fetched = datetime.now()
-                user = User.remote.get_or_create_from_instance(instance)
-
-        return self.parse_response_list(response_list['topics'])
+            return super(TopicRemoteManager, self).parse_response_list(response_list['topics'], extra_fields)
 
 class CommentRemoteManager(VkontakteManager):
 
-    @fetch_all(return_all=lambda k: k['topic'].comments.all())
+    @fetch_all(return_all=lambda topic,*a,**k: topic.comments.all())
     def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
@@ -100,19 +95,9 @@ class CommentRemoteManager(VkontakteManager):
         kwargs['extra_fields'] = {'topic_id': topic.id}
         return super(CommentRemoteManager, self).fetch(**kwargs)
 
-    def get(self, *args, **kwargs):
-        '''
-        Retrieve objects from remote server
-        '''
-        response_list = self.api_call(*args, **kwargs)
-
-#        if 'users' in response_list:
-#            users = User.remote.parse_response_list(response_list['users'])
-#            for instance in users:
-#                instance.fetched = datetime.now()
-#                user = User.remote.get_or_create_from_instance(instance)
-
-        return self.parse_response_list(response_list['comments'])
+    def parse_response_list(self, response_list, extra_fields=None):
+        if isinstance(response_list, dict):
+            return super(CommentRemoteManager, self).parse_response_list(response_list['comments'], extra_fields)
 
 class BoardAbstractModel(VkontakteModel):
     class Meta:
@@ -169,11 +154,8 @@ class Topic(BoardAbstractModel):
 
         super(Topic, self).parse(response)
 
-    def save(self, *args, **kwargs):
-        # it's here, because self.post is not in API response
         if '_' not in str(self.remote_id):
             self.remote_id = '-%s_%s' % (self.group.remote_id, self.remote_id)
-        return super(Topic, self).save(*args, **kwargs)
 
     def fetch_comments(self, *args, **kwargs):
         return Comment.remote.fetch(topic=self, *args, **kwargs)
