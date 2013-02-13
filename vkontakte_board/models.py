@@ -6,13 +6,14 @@ from django.utils.translation import ugettext as _
 from datetime import datetime
 from vkontakte_api.utils import api_call, VkontakteError
 from vkontakte_api import fields
-from vkontakte_api.models import VkontakteManager, VkontakteIDModel, VkontakteModel
+from vkontakte_api.models import VkontakteManager, VkontakteIDModel, VkontakteModel, VkontakteContentError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
 from dateutil import parser
 from datetime import timedelta, datetime
 import logging
+from PIL import PdfImagePlugin
 
 log = logging.getLogger('vkontakte_board')
 
@@ -22,7 +23,25 @@ class CommentManager(models.Manager):
 class TopicManager(models.Manager):
     pass
 
-class TopicRemoteManager(VkontakteManager):
+class BoardRemoteManager(VkontakteManager):
+
+    def parse_response_list(self, response_list, extra_fields=None):
+        if isinstance(response_list, dict):
+            print self.parse_response_users(response_list)
+            return super(BoardRemoteManager, self).parse_response_list(response_list[self.response_instances_fieldname], extra_fields)
+        else:
+            raise VkontakteContentError('Vkontakte response should be dict')
+
+    def parse_response_users(self, response_list):
+        users = User.remote.parse_response_list(response_list.get('profiles', []), {'fetched': datetime.now()})
+        instances = []
+        for instance in users:
+            instances += [User.remote.get_or_create_from_instance(instance)]
+        return instances
+
+class TopicRemoteManager(BoardRemoteManager):
+
+    response_instances_fieldname = 'topics'
 
     @fetch_all(return_all=lambda group,*a,**k: group.topics.all())
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
@@ -63,16 +82,9 @@ class TopicRemoteManager(VkontakteManager):
         kwargs['extra_fields'] = {'group_id': group.id}
         return super(TopicRemoteManager, self).fetch(**kwargs)
 
-    def parse_response_list(self, response_list, extra_fields=None):
-        if isinstance(response_list, dict):
-            if 'users' in response_list:
-                users = User.remote.parse_response_list(response_list['users'], {'fetched': datetime.now()})
-                for instance in users:
-                    user = User.remote.get_or_create_from_instance(instance)
+class CommentRemoteManager(BoardRemoteManager):
 
-            return super(TopicRemoteManager, self).parse_response_list(response_list['topics'], extra_fields)
-
-class CommentRemoteManager(VkontakteManager):
+    response_instances_fieldname = 'comments'
 
     @fetch_all(return_all=lambda topic,*a,**k: topic.comments.all())
     def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
@@ -94,10 +106,6 @@ class CommentRemoteManager(VkontakteManager):
 
         kwargs['extra_fields'] = {'topic_id': topic.id}
         return super(CommentRemoteManager, self).fetch(**kwargs)
-
-    def parse_response_list(self, response_list, extra_fields=None):
-        if isinstance(response_list, dict):
-            return super(CommentRemoteManager, self).parse_response_list(response_list['comments'], extra_fields)
 
 class BoardAbstractModel(VkontakteModel):
     class Meta:
