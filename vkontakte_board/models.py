@@ -27,7 +27,7 @@ class BoardRemoteManager(VkontakteManager):
 
     def parse_response_list(self, response_list, extra_fields=None):
         if isinstance(response_list, dict):
-            print self.parse_response_users(response_list)
+            self.parse_response_users(response_list)
             return super(BoardRemoteManager, self).parse_response_list(response_list[self.response_instances_fieldname], extra_fields)
         else:
             raise VkontakteContentError('Vkontakte response should be dict')
@@ -112,12 +112,9 @@ class BoardAbstractModel(VkontakteModel):
         abstract = True
 
     methods_namespace = 'board'
+    slug_prefix = 'topic'
 
-    remote_id = models.CharField(u'ID', max_length='20', help_text=u'Уникальный идентификатор', unique=True)
-
-    @property
-    def slug(self):
-        return self.slug_prefix + str(self.remote_id)
+    remote_id = models.CharField(u'ID', max_length='50', help_text=u'Уникальный идентификатор', unique=True)
 
 class Topic(BoardAbstractModel):
     class Meta:
@@ -127,7 +124,6 @@ class Topic(BoardAbstractModel):
         ordering = ['remote_id']
 
     remote_pk_field = 'tid'
-    slug_prefix = 'topic'
 
     group = models.ForeignKey(Group, verbose_name=u'Группа', related_name='topics')
 
@@ -150,6 +146,10 @@ class Topic(BoardAbstractModel):
     remote = TopicRemoteManager(remote_pk=('remote_id',), methods={
         'get': 'getTopics',
     })
+
+    @property
+    def slug(self):
+        return self.slug_prefix + str(self.remote_id)
 
     def __unicode__(self):
         return self.title
@@ -175,8 +175,6 @@ class Comment(BoardAbstractModel):
         verbose_name_plural = _('Vkontakte group topic comments')
         ordering = ['remote_id']
 
-    slug_prefix = 'topic'
-
     topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
     author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор сообщения')
     date = models.DateTimeField(help_text=u'Дата создания')
@@ -188,8 +186,9 @@ class Comment(BoardAbstractModel):
         'get': 'getComments',
     })
 
-#    def __unicode__(self):
-#        return self.text
+    @property
+    def slug(self):
+        return self.slug_prefix + str(self.topic.remote_id) + '?post=' + self.remote_id.split('_')[2]
 
     def parse(self, response):
         # TODO: add parsing attachments and polls
@@ -198,4 +197,8 @@ class Comment(BoardAbstractModel):
         if 'poll' in response:
             response.pop('poll')
         self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
+
         super(Comment, self).parse(response)
+
+        if '_' not in str(self.remote_id):
+            self.remote_id = '%s_%s' % (self.topic.remote_id, self.remote_id)
