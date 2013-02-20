@@ -1,5 +1,7 @@
 # Django Vkontakte Board
 
+<a href="https://travis-ci.org/ramusus/django-vkontakte-board" title="Django Vkontakte Board Travis Status"><img src="https://secure.travis-ci.org/ramusus/django-vkontakte-board.png"></a>
+
 Приложение позволяет взаимодействовать с дисскуссиями групп через Вконтакте API используя стандартные модели Django
 
 ## Установка
@@ -12,6 +14,7 @@
         ...
         'vkontakte_api',
         'vkontakte_groups',
+        'vkontakte_users',
         'vkontakte_board',
     )
 
