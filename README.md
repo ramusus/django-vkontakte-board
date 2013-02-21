@@ -1,6 +1,6 @@
 # Django Vkontakte Board
 
-<a href="https://travis-ci.org/ramusus/django-vkontakte-board" title="Django Vkontakte Board Travis Status"><img src="https://secure.travis-ci.org/ramusus/django-vkontakte-board.png"></a>
+[![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board)
 
 Приложение позволяет взаимодействовать с дисскуссиями групп через Вконтакте API используя стандартные модели Django
 
