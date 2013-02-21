@@ -1,17 +1,11 @@
 # -*- coding: utf-8 -*-
 from django.db import models
-from django.core.exceptions import ImproperlyConfigured
-from django.conf import settings
 from django.utils.translation import ugettext as _
-from datetime import datetime
-from vkontakte_api.utils import api_call, VkontakteError
-from vkontakte_api import fields
-from vkontakte_api.models import VkontakteManager, VkontakteIDModel, VkontakteModel, VkontakteContentError
+from vkontakte_api.models import VkontakteManager, VkontakteModel, VkontakteContentError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
-from dateutil import parser
-from datetime import timedelta, datetime
+from datetime import datetime
 import logging
 
 log = logging.getLogger('vkontakte_board')
@@ -118,8 +112,8 @@ class BoardAbstractModel(VkontakteModel):
 class Topic(BoardAbstractModel):
     class Meta:
         db_table = 'vkontakte_board_topic'
-        verbose_name = 'Дискуссия групп Вконтакте'
-        verbose_name_plural = 'Дискуссии групп Вконтакте'
+        verbose_name = u'Дискуссия групп Вконтакте'
+        verbose_name_plural = u'Дискуссии групп Вконтакте'
         ordering = ['remote_id']
 
     remote_pk_field = 'tid'
@@ -170,8 +164,8 @@ class Topic(BoardAbstractModel):
 class Comment(BoardAbstractModel):
     class Meta:
         db_table = 'vkontakte_board_comment'
-        verbose_name = _('Vkontakte group topic comment')
-        verbose_name_plural = _('Vkontakte group topic comments')
+        verbose_name = u'Коммментарий дискуссии групп Вконтакте'
+        verbose_name_plural = u'Коммментарии дискуссий групп Вконтакте'
         ordering = ['remote_id']
 
     topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
