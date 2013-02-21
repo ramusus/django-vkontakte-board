@@ -13,7 +13,6 @@ from vkontakte_users.models import User
 from dateutil import parser
 from datetime import timedelta, datetime
 import logging
-from PIL import PdfImagePlugin
 
 log = logging.getLogger('vkontakte_board')
 
