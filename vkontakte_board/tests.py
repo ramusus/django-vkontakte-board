@@ -32,9 +32,9 @@ class VkontakteBoardTest(TestCase):
 
         self.assertEqual(instance.remote_id, '-%s_51443905' % GROUP_ID)
         self.assertEqual(instance.title, u'Вопросы по поводу создания приложений')
-        self.assertEqual(instance.created, datetime(2011,2,22,12,0,0))
+        self.assertEqual(instance.created, datetime(2011,2,22,9,0,0))
         self.assertEqual(instance.created_by, User.objects.get(remote_id=1))
-        self.assertEqual(instance.updated, datetime(2011,2,22,12,0,0))
+        self.assertEqual(instance.updated, datetime(2011,2,22,9,0,0))
         self.assertEqual(instance.updated_by, User.objects.get(remote_id=1))
         self.assertEqual(instance.is_closed, False)
         self.assertEqual(instance.is_fixed, True)
@@ -55,7 +55,7 @@ class VkontakteBoardTest(TestCase):
 
         self.assertEqual(instance.remote_id, 11374)
         self.assertEqual(instance.author, User.objects.get(remote_id=189814))
-        self.assertEqual(instance.date, datetime(2011,2,22,12,0,0))
+        self.assertEqual(instance.date, datetime(2011,2,22,9,0,0))
         self.assertTrue(len(instance.text) > 10)
 
     def test_fetching_topics(self):
