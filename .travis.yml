@@ -11,7 +11,7 @@ install:
   - pip install -q coveralls --use-mirrors
   - pip install -q . --use-mirrors
 script:
-  - coverage run --omit=*migrations* --source=vkontakte_board quicktest.py vkontakte_board
+  - python quicktest.py vkontakte_groups
 after_success:
   - coveralls
 notifications:
