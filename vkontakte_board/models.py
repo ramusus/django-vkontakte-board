@@ -111,7 +111,6 @@ class BoardAbstractModel(VkontakteModel):
 
 class Topic(BoardAbstractModel):
     class Meta:
-        db_table = 'vkontakte_board_topic'
         verbose_name = u'Дискуссия групп Вконтакте'
         verbose_name_plural = u'Дискуссии групп Вконтакте'
         ordering = ['remote_id']
@@ -148,8 +147,10 @@ class Topic(BoardAbstractModel):
         return self.title
 
     def parse(self, response):
-        self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
-        self.updated_by = User.objects.get_or_create(remote_id=response.pop('updated_by'))[0]
+        if 'created_by' in response:
+            self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
+        if 'updated_by' in response:
+            self.updated_by = User.objects.get_or_create(remote_id=response.pop('updated_by'))[0]
         if 'comments' in response:
             response['comments_count'] = response.pop('comments')
 
@@ -163,7 +164,6 @@ class Topic(BoardAbstractModel):
 
 class Comment(BoardAbstractModel):
     class Meta:
-        db_table = 'vkontakte_board_comment'
         verbose_name = u'Коммментарий дискуссии групп Вконтакте'
         verbose_name_plural = u'Коммментарии дискуссий групп Вконтакте'
         ordering = ['remote_id']
