@@ -189,7 +189,8 @@ class Comment(BoardAbstractModel):
             response.pop('attachments')
         if 'poll' in response:
             response.pop('poll')
-        self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
+        if 'from_id' in response:
+            self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
 
         super(Comment, self).parse(response)
 
