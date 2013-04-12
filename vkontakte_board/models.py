@@ -18,10 +18,10 @@ class TopicManager(models.Manager):
 
 class BoardRemoteManager(VkontakteManager):
 
-    def parse_response_list(self, response_list, extra_fields=None):
-        if isinstance(response_list, dict):
-            self.parse_response_users(response_list)
-            return super(BoardRemoteManager, self).parse_response_list(response_list[self.response_instances_fieldname], extra_fields)
+    def parse_response(self, response, extra_fields=None):
+        if isinstance(response, dict):
+            self.parse_response_users(response)
+            return super(BoardRemoteManager, self).parse_response_list(response[self.response_instances_fieldname], extra_fields)
         else:
             raise VkontakteContentError('Vkontakte response should be dict')
 
@@ -129,7 +129,7 @@ class Topic(BoardAbstractModel):
     is_closed = models.BooleanField(u'Закрыта?', help_text=u'Тема является закрытой (в ней нельзя оставлять сообщения)')
     is_fixed = models.BooleanField(u'Прикреплена?', help_text=u'Тема является прилепленной (находится в начале списка тем)')
 
-    comments_count = models.PositiveIntegerField(u'Число сообщений в теме')
+    comments_count = models.PositiveIntegerField(u'Число сообщений в теме', default=0)
 
     first_comment = models.TextField(u'Текст первого сообщения')
     last_comment = models.TextField(u'Текст последнего сообщения')
@@ -147,10 +147,8 @@ class Topic(BoardAbstractModel):
         return self.title
 
     def parse(self, response):
-        if 'created_by' in response:
-            self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
-        if 'updated_by' in response:
-            self.updated_by = User.objects.get_or_create(remote_id=response.pop('updated_by'))[0]
+        self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
+        self.updated_by = User.objects.get_or_create(remote_id=response.pop('updated_by'))[0]
         if 'comments' in response:
             response['comments_count'] = response.pop('comments')
 
@@ -184,13 +182,12 @@ class Comment(BoardAbstractModel):
         return self.slug_prefix + str(self.topic.remote_id) + '?post=' + self.remote_id.split('_')[2]
 
     def parse(self, response):
+        self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
         # TODO: add parsing attachments and polls
         if 'attachments' in response:
             response.pop('attachments')
         if 'poll' in response:
             response.pop('poll')
-        if 'from_id' in response:
-            self.author = User.objects.get_or_create(remote_id=response.pop('from_id'))[0]
 
         super(Comment, self).parse(response)
 

@@ -4,7 +4,6 @@ from models import Topic, User, Comment
 from factories import TopicFactory
 from vkontakte_groups.factories import GroupFactory
 import simplejson as json
-from datetime import datetime
 
 GROUP_ID = 16297716
 TOPIC_ID = '-16297716_26523718'
@@ -27,19 +26,19 @@ class VkontakteBoardTest(TestCase):
                     "comments":5045}
                 ]
             }}'''
-        instance = Topic.remote.parse_response_list(json.loads(response)['response'], {'group_id': GroupFactory.create(remote_id=GROUP_ID).id})[0]
+        instance = Topic.remote.parse_response(json.loads(response)['response'], {'group_id': GroupFactory.create(remote_id=GROUP_ID).id})[0]
         instance.save()
 
         self.assertEqual(instance.remote_id, '-%s_51443905' % GROUP_ID)
         self.assertEqual(instance.group.remote_id, GROUP_ID)
         self.assertEqual(instance.title, u'Вопросы по поводу создания приложений')
-        self.assertEqual(instance.created, datetime(2011,2,22,9,0,0))
         self.assertEqual(instance.created_by, User.objects.get(remote_id=1))
-        self.assertEqual(instance.updated, datetime(2011,2,22,9,0,0))
         self.assertEqual(instance.updated_by, User.objects.get(remote_id=1))
         self.assertEqual(instance.is_closed, False)
         self.assertEqual(instance.is_fixed, True)
         self.assertEqual(instance.comments_count, 5045)
+        self.assertIsNotNone(instance.created)
+        self.assertIsNotNone(instance.updated)
 
     def test_parse_comment(self):
 
@@ -52,13 +51,13 @@ class VkontakteBoardTest(TestCase):
                     "text":"При возникновении любых вопросов, связанных с разработкой приложений, в первую очередь следует обратиться к FAQ в группе &quot;Приложения на основе ВКонтакте API&quot;:<br>http:\/\/vkontakte.ru\/pages.php?id=4143397<br><br>В той же группе есть тема &quot;Обмен опытом&quot; (http:\/\/vkontakte.ru\/topic-2226515_3507340), которая тоже крайне рекомендуется к ознакомлению.<br><br>Если вышеозначенные ссылки не помогли - можно задать вопрос здесь.<br><br>Задавать вопросы в духе &quot;я ничего не понял, объясните кто-нибудь в личке&quot; не следует, они будут удаляться.<br><br>Не следует также задавать вопросы, относящиеся не к разработке, а к работе конкретных приложений - обращайтесь в официальные группы этих приложений."}
                 ]
             }}'''
-        instance = Comment.remote.parse_response_list(json.loads(response)['response'], {'topic_id': TopicFactory.create(remote_id=TOPIC_ID).id})[0]
+        instance = Comment.remote.parse_response(json.loads(response)['response'], {'topic_id': TopicFactory.create(remote_id=TOPIC_ID).id})[0]
         instance.save()
 
         self.assertEqual(instance.remote_id, '%s_11374' % TOPIC_ID)
         self.assertEqual(instance.topic.remote_id, TOPIC_ID)
         self.assertEqual(instance.author, User.objects.get(remote_id=189814))
-        self.assertEqual(instance.date, datetime(2011,2,22,9,0,0))
+        self.assertIsNotNone(instance.date)
         self.assertTrue(len(instance.text) > 10)
 
     def test_fetching_topics(self):
