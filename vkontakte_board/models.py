@@ -120,8 +120,8 @@ class Topic(BoardAbstractModel):
     group = models.ForeignKey(Group, verbose_name=u'Группа', related_name='topics')
 
     title = models.CharField(u'Заголовок', max_length=500)
-    created = models.DateTimeField(u'Дата создания')
-    updated = models.DateTimeField(u'Дата последнего сообщения', null=True)
+    created = models.DateTimeField(u'Дата создания', db_index=True)
+    updated = models.DateTimeField(u'Дата последнего сообщения', null=True, db_index=True)
 
     created_by = models.ForeignKey(User, related_name='topics_created', verbose_name=u'Пользователь, создавший тему')
     updated_by = models.ForeignKey(User, related_name='topics_updated', verbose_name=u'Пользователь, оставивший последнее сообщение')
@@ -168,7 +168,7 @@ class Comment(BoardAbstractModel):
 
     topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
     author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор сообщения')
-    date = models.DateTimeField(help_text=u'Дата создания')
+    date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
     text = models.TextField(u'Текст сообщения')
     #attachments - присутствует только если у сообщения есть прикрепления, содержит массив объектов (фотографии, ссылки и т.п.). Более подробная информация представлена на странице Описание поля attachments
 
