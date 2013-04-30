@@ -28,6 +28,11 @@
     OAUTH_TOKENS_VKONTAKTE_PASSWORD = ''                                # user password
     OAUTH_TOKENS_VKONTAKTE_PHONE_END = ''                               # last 4 digits of user mobile phone
 
+## Покрытие методов API
+
+* [board.getTopics](http://vk.com/developers.php?oid=-1&p=board.getTopics) – возвращает список тем в обсуждениях указанной группы;
+* [board.getComments](http://vk.com/developers.php?oid=-1&p=board.getComments) – возвращает список сообщений в указанной теме;
+
 ## Примеры использования
 
 ### Получение дискуссий группы через метод группы
