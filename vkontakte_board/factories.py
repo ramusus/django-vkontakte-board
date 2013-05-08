@@ -5,7 +5,7 @@ from datetime import datetime
 import factory
 import random
 
-class TopicFactory(factory.Factory):
+class TopicFactory(factory.DjangoModelFactory):
     FACTORY_FOR = Topic
 
     group = factory.SubFactory(GroupFactory)
