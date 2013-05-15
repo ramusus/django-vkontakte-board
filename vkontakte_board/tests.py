@@ -19,7 +19,7 @@ class VkontakteBoardTest(TestCase):
                     "title":"Вопросы по поводу создания приложений",
                     "created":1298365200,
                     "created_by":1,
-                    "updated":1298365200,
+                    "updated":0,
                     "updated_by":1,
                     "is_closed":0,
                     "is_fixed":1,
@@ -38,7 +38,7 @@ class VkontakteBoardTest(TestCase):
         self.assertEqual(instance.is_fixed, True)
         self.assertEqual(instance.comments_count, 5045)
         self.assertIsNotNone(instance.created)
-        self.assertIsNotNone(instance.updated)
+        self.assertIsNone(instance.updated)
 
     def test_parse_comment(self):
 
