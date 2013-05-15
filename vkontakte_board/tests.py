@@ -72,8 +72,18 @@ class VkontakteBoardTest(TestCase):
         group = GroupFactory.create(remote_id=GROUP_ID)
         topic = TopicFactory.create(remote_id=TOPIC_ID, group=group)
 
-        topic.fetch_comments()
+        comments = topic.fetch_comments()
         self.assertEqual(topic.comments.count(), 20)
+        self.assertEqual(topic.comments.count(), len(comments))
 
         topic.fetch_comments(all=True)
         self.assertTrue(topic.comments.count() > 20)
+
+    def test_fetching_comments_of_deleted_topic(self):
+
+        group = GroupFactory.create(remote_id=17589818)
+        topic = TopicFactory.create(remote_id='-17589818_26390905', group=group)
+
+        comments = topic.fetch_comments()
+        self.assertEqual(topic.comments.count(), 0)
+        self.assertEqual(topic.comments.count(), len(comments))

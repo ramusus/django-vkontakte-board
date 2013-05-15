@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db import models
 from django.utils.translation import ugettext as _
-from vkontakte_api.models import VkontakteManager, VkontakteModel, VkontakteContentError
+from vkontakte_api.models import VkontakteManager, VkontakteModel, VkontakteContentError, VkontakteError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User
@@ -98,7 +98,14 @@ class CommentRemoteManager(BoardRemoteManager):
         kwargs['count'] = int(count)
 
         kwargs['extra_fields'] = {'topic_id': topic.id}
-        return super(CommentRemoteManager, self).fetch(**kwargs)
+        try:
+            return super(CommentRemoteManager, self).fetch(**kwargs)
+        except VkontakteError, e:
+            if e.code == 100 and 'invalid tid' in e.description:
+                log.error("Impossible to fetch comments for unexisted topic ID=%s" % topic.remote_id)
+                return self.model.objects.none()
+            else:
+                raise e
 
 class BoardAbstractModel(VkontakteModel):
     class Meta:
