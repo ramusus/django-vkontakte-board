@@ -1,10 +1,10 @@
-# Django Vkontakte Board
-
-[![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
+Django Vkontakte Board [![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
+======================
 
 Приложение позволяет взаимодействовать с дисскуссиями групп через Вконтакте API используя стандартные модели Django
 
-## Установка
+Установка
+---------
 
     pip install django-vkontakte-board
 
@@ -28,12 +28,14 @@
     OAUTH_TOKENS_VKONTAKTE_PASSWORD = ''                                # user password
     OAUTH_TOKENS_VKONTAKTE_PHONE_END = ''                               # last 4 digits of user mobile phone
 
-## Покрытие методов API
+Покрытие методов API
+--------------------
 
 * [board.getTopics](http://vk.com/developers.php?oid=-1&p=board.getTopics) – возвращает список тем в обсуждениях указанной группы;
 * [board.getComments](http://vk.com/developers.php?oid=-1&p=board.getComments) – возвращает список сообщений в указанной теме;
 
-## Примеры использования
+Примеры использования
+---------------------
 
 ### Получение дискуссий группы через метод группы
 

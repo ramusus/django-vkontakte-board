@@ -4,7 +4,7 @@ from django.utils.translation import ugettext as _
 from vkontakte_api.models import VkontakteManager, VkontakteModel, VkontakteContentError, VkontakteError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
-from vkontakte_users.models import User
+from vkontakte_users.models import User, ParseUsersMixin
 from datetime import datetime
 import logging
 
@@ -16,7 +16,7 @@ class CommentManager(models.Manager):
 class TopicManager(models.Manager):
     pass
 
-class BoardRemoteManager(VkontakteManager):
+class BoardRemoteManager(VkontakteManager, ParseUsersMixin):
 
     def parse_response(self, response, extra_fields=None):
         if isinstance(response, dict):
@@ -25,18 +25,11 @@ class BoardRemoteManager(VkontakteManager):
         else:
             raise VkontakteContentError('Vkontakte response should be dict')
 
-    def parse_response_users(self, response_list):
-        users = User.remote.parse_response_list(response_list.get('profiles', []), {'fetched': datetime.now()})
-        instances = []
-        for instance in users:
-            instances += [User.remote.get_or_create_from_instance(instance)]
-        return instances
-
 class TopicRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'topics'
 
-    @fetch_all(return_all=lambda group,*a,**k: group.topics.all())
+    @fetch_all(return_all=lambda self,group,*a,**k: group.topics.all())
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
         #gid
         #ID группы, список тем которой необходимо получить.
@@ -79,7 +72,7 @@ class CommentRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'comments'
 
-    @fetch_all(return_all=lambda topic,*a,**k: topic.comments.all())
+    @fetch_all(return_all=lambda self,topic,*a,**k: topic.comments.all())
     def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
