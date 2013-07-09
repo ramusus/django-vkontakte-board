@@ -29,7 +29,7 @@ class TopicRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'topics'
 
-    @fetch_all(return_all=lambda self,group,*a,**k: group.topics.all())
+    @fetch_all
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
         #gid
         #ID группы, список тем которой необходимо получить.
@@ -72,7 +72,7 @@ class CommentRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'comments'
 
-    @fetch_all(return_all=lambda self,topic,*a,**k: topic.comments.all())
+    @fetch_all
     def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
