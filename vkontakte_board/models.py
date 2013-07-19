@@ -29,8 +29,8 @@ class TopicRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'topics'
 
-    @fetch_all
-    def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=40, preview=0, preview_length=90, **kwargs):
+    @fetch_all(default_count=100)
+    def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=100, preview=0, preview_length=90, **kwargs):
         #gid
         #ID группы, список тем которой необходимо получить.
         kwargs['gid'] = group.remote_id
@@ -72,8 +72,8 @@ class CommentRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'comments'
 
-    @fetch_all
-    def fetch(self, topic, extended=False, offset=0, count=20, **kwargs):
+    @fetch_all(default_count=100)
+    def fetch(self, topic, extended=False, offset=0, count=100, **kwargs):
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
         kwargs['gid'] = topic.group.remote_id
