@@ -73,7 +73,14 @@ class CommentRemoteManager(BoardRemoteManager):
     response_instances_fieldname = 'comments'
 
     @fetch_all(default_count=100)
-    def fetch(self, topic, extended=False, offset=0, count=100, **kwargs):
+    def fetch(self, topic, extended=False, offset=0, count=100, sort='asc', need_likes=True, after=None, **kwargs):
+        if count > 100:
+            raise ValueError("Attribute 'count' can not be more than 100")
+        if sort not in ['asc','desc']:
+            raise ValueError("Attribute 'sort' should be equal to 'asc' or 'desc'")
+        if sort == 'asc' and after:
+            raise ValueError("Attribute sort should be equal to 'desc' with defined `after` attribute")
+
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
         kwargs['gid'] = topic.group.remote_id
@@ -86,9 +93,20 @@ class CommentRemoteManager(BoardRemoteManager):
         #offset
         #Смещение, необходимое для выборки определенного подмножества сообщений.
         kwargs['offset'] = int(offset)
+        # sort
+        # порядок сортировки комментариев:
+        # asc - хронологический
+        # desc - антихронологический
+        kwargs['sort'] = sort
         #count
         #Количество сообщений, которое необходимо получить (но не более 100). По умолчанию 20.
         kwargs['count'] = int(count)
+        # need_likes
+        # 1 - будет возвращено дополнительное поле likes. По умолчанию поле likes не возвращается.
+        kwargs['need_likes'] = int(need_likes)
+
+        if after:
+            kwargs['_after'] = after
 
         kwargs['extra_fields'] = {'topic_id': topic.id}
         try:
@@ -171,6 +189,9 @@ class Comment(BoardAbstractModel):
     date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
     text = models.TextField(u'Текст сообщения')
     #attachments - присутствует только если у сообщения есть прикрепления, содержит массив объектов (фотографии, ссылки и т.п.). Более подробная информация представлена на странице Описание поля attachments
+
+    # TODO: implement with tests
+#    likes = models.PositiveIntegerField(u'Кол-во лайков', default=0)
 
     objects = CommentManager()
     remote = CommentRemoteManager(remote_pk=('remote_id',), methods={
