@@ -1,5 +1,7 @@
-Django Vkontakte Board [![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
+Django Vkontakte Board
 ======================
+
+[![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
 
 Приложение позволяет взаимодействовать с дисскуссиями групп через Вконтакте API используя стандартные модели Django
 
@@ -13,7 +15,9 @@ Django Vkontakte Board [![Build Status](https://travis-ci.org/ramusus/django-vko
     INSTALLED_APPS = (
         ...
         'oauth_tokens',
+        'taggit',
         'vkontakte_api',
+        'vkontakte_places,
         'vkontakte_groups',
         'vkontakte_users',
         'vkontakte_board',
@@ -31,8 +35,8 @@ Django Vkontakte Board [![Build Status](https://travis-ci.org/ramusus/django-vko
 Покрытие методов API
 --------------------
 
-* [board.getTopics](http://vk.com/developers.php?oid=-1&p=board.getTopics) – возвращает список тем в обсуждениях указанной группы;
-* [board.getComments](http://vk.com/developers.php?oid=-1&p=board.getComments) – возвращает список сообщений в указанной теме;
+* [board.getTopics](http://vk.com/dev/board.getTopics) – возвращает список тем в обсуждениях указанной группы;
+* [board.getComments](http://vk.com/dev/board.getComments) – возвращает список сообщений в указанной теме;
 
 Примеры использования
 ---------------------
