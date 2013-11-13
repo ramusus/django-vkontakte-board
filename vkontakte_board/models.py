@@ -147,7 +147,7 @@ class Topic(BoardAbstractModel):
     is_closed = models.BooleanField(u'Закрыта?', help_text=u'Тема является закрытой (в ней нельзя оставлять сообщения)')
     is_fixed = models.BooleanField(u'Прикреплена?', help_text=u'Тема является прилепленной (находится в начале списка тем)')
 
-    comments_count = models.PositiveIntegerField(u'Число сообщений в теме', default=0)
+    comments_count = models.PositiveIntegerField(u'Число сообщений в теме', default=0, db_index=True)
 
     first_comment = models.TextField(u'Текст первого сообщения')
     last_comment = models.TextField(u'Текст последнего сообщения')
