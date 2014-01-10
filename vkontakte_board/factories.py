@@ -17,6 +17,9 @@ class TopicFactory(factory.DjangoModelFactory):
     created_by = factory.SubFactory(UserFactory)
     updated_by = factory.SubFactory(UserFactory)
 
+    is_closed = random.choice((True, False))
+    is_fixed = random.choice((True, False))
+
 class CommentFactory(factory.DjangoModelFactory):
     FACTORY_FOR = Comment
 
