@@ -1,7 +1,7 @@
 Django Vkontakte Board
 ======================
 
-[![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
+[![PyPI version](https://badge.fury.io/py/django-vkontakte-board.png)](http://badge.fury.io/py/django-vkontakte-board) [![Build Status](https://travis-ci.org/ramusus/django-vkontakte-board.png?branch=master)](https://travis-ci.org/ramusus/django-vkontakte-board) [![Coverage Status](https://coveralls.io/repos/ramusus/django-vkontakte-board/badge.png?branch=master)](https://coveralls.io/r/ramusus/django-vkontakte-board)
 
 Приложение позволяет взаимодействовать с дисскуссиями групп через Вконтакте API используя стандартные модели Django
 
