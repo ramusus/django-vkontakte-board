@@ -60,14 +60,14 @@ class VkontakteBoardTest(TestCase):
         self.assertIsNotNone(instance.date)
         self.assertTrue(len(instance.text) > 10)
 
-    def test_fetching_topics(self):
+    def test_fetch_topics(self):
 
         group = GroupFactory.create(remote_id=GROUP_ID)
         group.fetch_topics()
 
         self.assertTrue(group.topics.count() > 10)
 
-    def test_fetching_comments(self):
+    def test_fetch_comments(self):
 
         group = GroupFactory.create(remote_id=GROUP_ID)
         topic = TopicFactory.create(remote_id=TOPIC_ID, group=group)
@@ -92,7 +92,7 @@ class VkontakteBoardTest(TestCase):
         self.assertTrue(len(comments) == Comment.objects.count() == topic.comments.count())
         self.assertTrue(topic.comments.count() > 20)
 
-    def test_fetching_comments_of_deleted_topic(self):
+    def test_fetch_comments_of_deleted_topic(self):
 
         group = GroupFactory.create(remote_id=17589818)
         topic = TopicFactory.create(remote_id='-17589818_26390905', group=group)

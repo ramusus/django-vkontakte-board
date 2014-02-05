@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from django.db import models
+from django.db import models, transaction
 from django.utils.translation import ugettext as _
-from vkontakte_api.models import VkontakteManager, VkontakteModel, VkontakteContentError, VkontakteError
+from vkontakte_api.models import VkontakteTimelineManager, VkontakteModel, VkontakteContentError, VkontakteError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User, ParseUsersMixin
@@ -16,7 +16,7 @@ class CommentManager(models.Manager):
 class TopicManager(models.Manager):
     pass
 
-class BoardRemoteManager(VkontakteManager, ParseUsersMixin):
+class BoardRemoteManager(VkontakteTimelineManager, ParseUsersMixin):
 
     def parse_response(self, response, extra_fields=None):
         if isinstance(response, dict):
@@ -29,6 +29,7 @@ class TopicRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'topics'
 
+    @transaction.commit_on_success
     @fetch_all(default_count=100)
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=100, preview=0, preview_length=90, **kwargs):
         #gid
@@ -72,14 +73,19 @@ class CommentRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'comments'
 
+    @transaction.commit_on_success
     @fetch_all(default_count=100)
-    def fetch(self, topic, extended=False, offset=0, count=100, sort='asc', need_likes=True, after=None, **kwargs):
+    def fetch(self, topic, extended=False, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
         if count > 100:
             raise ValueError("Attribute 'count' can not be more than 100")
         if sort not in ['asc','desc']:
             raise ValueError("Attribute 'sort' should be equal to 'asc' or 'desc'")
         if sort == 'asc' and after:
-            raise ValueError("Attribute sort should be equal to 'desc' with defined `after` attribute")
+            raise ValueError("Attribute `sort` should be equal to 'desc' with defined `after` attribute")
+        if before and not after:
+            raise ValueError("Attribute `before` should be specified with attribute `after`")
+        if before and before < after:
+            raise ValueError("Attribute `before` should be later, than attribute `after`")
 
         #gid
         #ID группы, к обсуждениям которой относится указанная тема.
@@ -105,8 +111,9 @@ class CommentRemoteManager(BoardRemoteManager):
         # 1 - будет возвращено дополнительное поле likes. По умолчанию поле likes не возвращается.
         kwargs['need_likes'] = int(need_likes)
 
-        if after:
-            kwargs['_after'] = after
+        # special parameters
+        kwargs['after'] = after
+        kwargs['before'] = before
 
         kwargs['extra_fields'] = {'topic_id': topic.id}
         try:
@@ -175,6 +182,7 @@ class Topic(BoardAbstractModel):
         if '_' not in str(self.remote_id):
             self.remote_id = '-%s_%s' % (self.group.remote_id, self.remote_id)
 
+    @transaction.commit_on_success
     def fetch_comments(self, *args, **kwargs):
         return Comment.remote.fetch(topic=self, *args, **kwargs)
 
