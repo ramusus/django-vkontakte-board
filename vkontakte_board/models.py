@@ -66,7 +66,7 @@ class TopicRemoteManager(BoardRemoteManager):
         #Количество символов, по которому нужно обрезать первое и последнее сообщение. Укажите 0, если Вы не хотите обрезать сообщение. (по умолчанию 90).
         kwargs['preview_length'] = int(preview_length)
 
-        kwargs['extra_fields'] = {'group_id': group.id}
+        kwargs['extra_fields'] = {'group_id': group.pk}
         return super(TopicRemoteManager, self).fetch(**kwargs)
 
 class CommentRemoteManager(BoardRemoteManager):
@@ -115,7 +115,7 @@ class CommentRemoteManager(BoardRemoteManager):
         kwargs['after'] = after
         kwargs['before'] = before
 
-        kwargs['extra_fields'] = {'topic_id': topic.id}
+        kwargs['extra_fields'] = {'topic_id': topic.pk}
         try:
             return super(CommentRemoteManager, self).fetch(**kwargs)
         except VkontakteError, e:
@@ -132,13 +132,13 @@ class BoardAbstractModel(VkontakteModel):
     methods_namespace = 'board'
     slug_prefix = 'topic'
 
+    # TODO: reduce max_length to 20, after changing Comment.remote_id generation rules
     remote_id = models.CharField(u'ID', max_length='50', help_text=u'Уникальный идентификатор', unique=True)
 
 class Topic(BoardAbstractModel):
     class Meta:
         verbose_name = u'Дискуссия групп Вконтакте'
         verbose_name_plural = u'Дискуссии групп Вконтакте'
-        ordering = ['remote_id']
 
     remote_pk_field = 'tid'
 
@@ -190,10 +190,9 @@ class Comment(BoardAbstractModel):
     class Meta:
         verbose_name = u'Коммментарий дискуссии групп Вконтакте'
         verbose_name_plural = u'Коммментарии дискуссий групп Вконтакте'
-        ordering = ['remote_id']
 
     topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
-    author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор сообщения')
+    author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор комментария')
     date = models.DateTimeField(help_text=u'Дата создания', db_index=True)
     text = models.TextField(u'Текст сообщения')
     #attachments - присутствует только если у сообщения есть прикрепления, содержит массив объектов (фотографии, ссылки и т.п.). Более подробная информация представлена на странице Описание поля attachments
@@ -221,4 +220,5 @@ class Comment(BoardAbstractModel):
         super(Comment, self).parse(response)
 
         if '_' not in str(self.remote_id):
+            # TODO: remove second _ from remote_id, make in 111_111 for comments
             self.remote_id = '%s_%s' % (self.topic.remote_id, self.remote_id)
