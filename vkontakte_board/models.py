@@ -222,3 +222,14 @@ class Comment(BoardAbstractModel):
         if '_' not in str(self.remote_id):
             # TODO: remove second _ from remote_id, make in 111_111 for comments
             self.remote_id = '%s_%s' % (self.topic.remote_id, self.remote_id)
+
+    def save(self, *args, **kwargs):
+        # check strings for good encoding
+        # there is problems to save users with bad encoded activity strings like user ID=-2611_27475528_133349
+        # TODO: move it to the level up
+        try:
+            self.text.encode('utf-16').decode('utf-16')
+        except UnicodeDecodeError:
+            self.text = ''
+
+        return super(Comment, self).save(*args, **kwargs)
