@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.db import models, transaction
 from django.utils.translation import ugettext as _
+from django.utils.encoding import python_2_unicode_compatible
 from vkontakte_api.models import VkontakteTimelineManager, VkontakteModel, VkontakteContentError, VkontakteError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
@@ -10,11 +11,14 @@ import logging
 
 log = logging.getLogger('vkontakte_board')
 
+
 class CommentManager(models.Manager):
     pass
 
+
 class TopicManager(models.Manager):
     pass
+
 
 class BoardRemoteManager(VkontakteTimelineManager, ParseUsersMixin):
 
@@ -24,6 +28,7 @@ class BoardRemoteManager(VkontakteTimelineManager, ParseUsersMixin):
             return super(BoardRemoteManager, self).parse_response_list(response[self.response_instances_fieldname], extra_fields)
         else:
             raise VkontakteContentError('Vkontakte response should be dict')
+
 
 class TopicRemoteManager(BoardRemoteManager):
 
@@ -68,6 +73,7 @@ class TopicRemoteManager(BoardRemoteManager):
 
         kwargs['extra_fields'] = {'group_id': group.pk}
         return super(TopicRemoteManager, self).fetch(**kwargs)
+
 
 class CommentRemoteManager(BoardRemoteManager):
 
@@ -125,9 +131,8 @@ class CommentRemoteManager(BoardRemoteManager):
             else:
                 raise e
 
+
 class BoardAbstractModel(VkontakteModel):
-    class Meta:
-        abstract = True
 
     methods_namespace = 'board'
     slug_prefix = 'topic'
@@ -135,10 +140,12 @@ class BoardAbstractModel(VkontakteModel):
     # TODO: reduce max_length to 20, after changing Comment.remote_id generation rules
     remote_id = models.CharField(u'ID', max_length='50', help_text=u'Уникальный идентификатор', unique=True)
 
-class Topic(BoardAbstractModel):
     class Meta:
-        verbose_name = u'Дискуссия групп Вконтакте'
-        verbose_name_plural = u'Дискуссии групп Вконтакте'
+        abstract = True
+
+
+@python_2_unicode_compatible
+class Topic(BoardAbstractModel):
 
     remote_pk_field = 'tid'
 
@@ -164,12 +171,16 @@ class Topic(BoardAbstractModel):
         'get': 'getTopics',
     })
 
+    class Meta:
+        verbose_name = u'Дискуссия групп Вконтакте'
+        verbose_name_plural = u'Дискуссии групп Вконтакте'
+
+    def __str__(self):
+        return self.title
+
     @property
     def slug(self):
         return self.slug_prefix + str(self.remote_id)
-
-    def __unicode__(self):
-        return self.title
 
     def parse(self, response):
         self.created_by = User.objects.get_or_create(remote_id=response.pop('created_by'))[0]
@@ -186,10 +197,8 @@ class Topic(BoardAbstractModel):
     def fetch_comments(self, *args, **kwargs):
         return Comment.remote.fetch(topic=self, *args, **kwargs)
 
+
 class Comment(BoardAbstractModel):
-    class Meta:
-        verbose_name = u'Коммментарий дискуссии групп Вконтакте'
-        verbose_name_plural = u'Коммментарии дискуссий групп Вконтакте'
 
     topic = models.ForeignKey(Topic, verbose_name=u'Тема', related_name='comments')
     author = models.ForeignKey(User, related_name='topics_comments', verbose_name=u'Aвтор комментария')
@@ -204,6 +213,21 @@ class Comment(BoardAbstractModel):
     remote = CommentRemoteManager(remote_pk=('remote_id',), methods={
         'get': 'getComments',
     })
+
+    class Meta:
+        verbose_name = u'Коммментарий дискуссии групп Вконтакте'
+        verbose_name_plural = u'Коммментарии дискуссий групп Вконтакте'
+
+    def save(self, *args, **kwargs):
+        # check strings for good encoding
+        # there is problems to save users with bad encoded activity strings like user ID=-2611_27475528_133349
+        # TODO: move it to the level up
+        try:
+            self.text.encode('utf-16').decode('utf-16')
+        except UnicodeDecodeError:
+            self.text = ''
+
+        return super(Comment, self).save(*args, **kwargs)
 
     @property
     def slug(self):
@@ -222,14 +246,3 @@ class Comment(BoardAbstractModel):
         if '_' not in str(self.remote_id):
             # TODO: remove second _ from remote_id, make in 111_111 for comments
             self.remote_id = '%s_%s' % (self.topic.remote_id, self.remote_id)
-
-    def save(self, *args, **kwargs):
-        # check strings for good encoding
-        # there is problems to save users with bad encoded activity strings like user ID=-2611_27475528_133349
-        # TODO: move it to the level up
-        try:
-            self.text.encode('utf-16').decode('utf-16')
-        except UnicodeDecodeError:
-            self.text = ''
-
-        return super(Comment, self).save(*args, **kwargs)

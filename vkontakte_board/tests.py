@@ -73,7 +73,8 @@ class VkontakteBoardTest(TestCase):
         topic = TopicFactory.create(remote_id=TOPIC_ID, group=group)
 
         comments = topic.fetch_comments(count=20, sort='desc')
-        self.assertTrue(len(comments) == topic.comments.count() == 20)
+        self.assertEqual(len(comments), topic.comments.count())
+        self.assertEqual(len(comments), 20)
 
         # testing `after` parameter
         after = Comment.objects.order_by('date')[0].date
@@ -82,15 +83,18 @@ class VkontakteBoardTest(TestCase):
         self.assertEqual(Comment.objects.count(), 0)
 
         comments = topic.fetch_comments(after=after, sort='desc')
-        self.assertTrue(len(comments) == Comment.objects.count() == topic.comments.count() == 20)
+        self.assertEqual(len(comments), Comment.objects.count())
+        self.assertEqual(len(comments), topic.comments.count())
+        self.assertEqual(len(comments), 20)
 
         # testing `all` parameter
         Comment.objects.all().delete()
         self.assertEqual(Comment.objects.count(), 0)
 
         comments = topic.fetch_comments(all=True)
-        self.assertTrue(len(comments) == Comment.objects.count() == topic.comments.count())
-        self.assertTrue(topic.comments.count() > 20)
+        self.assertEqual(len(comments), Comment.objects.count())
+        self.assertEqual(len(comments), topic.comments.count())
+        self.assertTrue(len(comments) > 20)
 
     def test_fetch_comments_of_deleted_topic(self):
 
