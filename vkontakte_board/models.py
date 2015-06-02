@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from django.db import models, transaction
-from django.utils.translation import ugettext as _
+from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from vkontakte_api.models import VkontakteTimelineManager, VkontakteModel, VkontakteContentError, VkontakteError
 from vkontakte_api.decorators import fetch_all
 from vkontakte_groups.models import Group
 from vkontakte_users.models import User, ParseUsersMixin
-from datetime import datetime
+from vkontakte_api.decorators import atomic
 import logging
 
 log = logging.getLogger('vkontakte_board')
@@ -34,7 +33,7 @@ class TopicRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'topics'
 
-    @transaction.commit_on_success
+    @atomic
     @fetch_all(default_count=100)
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=100, preview=0, preview_length=90, **kwargs):
         #gid
@@ -79,7 +78,7 @@ class CommentRemoteManager(BoardRemoteManager):
 
     response_instances_fieldname = 'comments'
 
-    @transaction.commit_on_success
+    @atomic
     @fetch_all(default_count=100)
     def fetch(self, topic, extended=False, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
         if count > 100:
@@ -193,7 +192,7 @@ class Topic(BoardAbstractModel):
         if '_' not in str(self.remote_id):
             self.remote_id = '-%s_%s' % (self.group.remote_id, self.remote_id)
 
-    @transaction.commit_on_success
+    @atomic
     def fetch_comments(self, *args, **kwargs):
         return Comment.remote.fetch(topic=self, *args, **kwargs)
 
