@@ -157,8 +157,8 @@ class Topic(BoardAbstractModel):
     created_by = models.ForeignKey(User, related_name='topics_created', verbose_name=u'Пользователь, создавший тему')
     updated_by = models.ForeignKey(User, related_name='topics_updated', verbose_name=u'Пользователь, оставивший последнее сообщение')
 
-    is_closed = models.BooleanField(u'Закрыта?', help_text=u'Тема является закрытой (в ней нельзя оставлять сообщения)')
-    is_fixed = models.BooleanField(u'Прикреплена?', help_text=u'Тема является прилепленной (находится в начале списка тем)')
+    is_closed = models.BooleanField(u'Закрыта?', default=False, help_text=u'Тема является закрытой (в ней нельзя оставлять сообщения)')
+    is_fixed = models.BooleanField(u'Прикреплена?', default=False, help_text=u'Тема является прилепленной (находится в начале списка тем)')
 
     comments_count = models.PositiveIntegerField(u'Число сообщений в теме', default=0, db_index=True)
 
