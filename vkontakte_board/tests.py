@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
-from django.test import TestCase
-from models import Topic, User, Comment
-from factories import TopicFactory
 from vkontakte_groups.factories import GroupFactory
+from vkontakte_api.tests import VkontakteApiTestCase
 import simplejson as json
+
+from .models import Topic, User, Comment
+from .factories import TopicFactory
+
 
 GROUP_ID = 16297716
 TOPIC_ID = '-16297716_26523718'
 
-class VkontakteBoardTest(TestCase):
+
+class VkontakteBoardTest(VkontakteApiTestCase):
 
     def test_parse_topic(self):
 
         response = '''
             {"response":{
-                "topics":[1,
-                    {"tid":51443905,
+                "count":1,
+                "items":[
+                    {"id":51443905,
                     "title":"Вопросы по поводу создания приложений",
                     "created":1298365200,
                     "created_by":1,
@@ -26,7 +30,8 @@ class VkontakteBoardTest(TestCase):
                     "comments":5045}
                 ]
             }}'''
-        instance = Topic.remote.parse_response(json.loads(response)['response'], {'group_id': GroupFactory.create(remote_id=GROUP_ID).pk})[0]
+        instance = Topic.remote.parse_response(json.loads(response)['response'], {
+            'group_id': GroupFactory(remote_id=GROUP_ID).pk})[0]
         instance.save()
 
         self.assertEqual(instance.remote_id, '-%s_51443905' % GROUP_ID)
@@ -44,14 +49,16 @@ class VkontakteBoardTest(TestCase):
 
         response = '''
             {"response":{
-                "comments":[5045,{
-                    "id":11374,
+                "count":1,
+                "items":[
+                    {"id":11374,
                     "from_id":189814,
                     "date":1298365200,
-                    "text":"При возникновении любых вопросов, связанных с разработкой приложений, в первую очередь следует обратиться к FAQ в группе &quot;Приложения на основе ВКонтакте API&quot;:<br>http:\/\/vkontakte.ru\/pages.php?id=4143397<br><br>В той же группе есть тема &quot;Обмен опытом&quot; (http:\/\/vkontakte.ru\/topic-2226515_3507340), которая тоже крайне рекомендуется к ознакомлению.<br><br>Если вышеозначенные ссылки не помогли - можно задать вопрос здесь.<br><br>Задавать вопросы в духе &quot;я ничего не понял, объясните кто-нибудь в личке&quot; не следует, они будут удаляться.<br><br>Не следует также задавать вопросы, относящиеся не к разработке, а к работе конкретных приложений - обращайтесь в официальные группы этих приложений."}
+                    "text":"При возникновении любых вопросов, связанных с разработкой приложений, в первую очередь"}
                 ]
             }}'''
-        instance = Comment.remote.parse_response(json.loads(response)['response'], {'topic_id': TopicFactory.create(remote_id=TOPIC_ID).pk})[0]
+        instance = Comment.remote.parse_response(json.loads(response)['response'], {
+            'topic_id': TopicFactory(remote_id=TOPIC_ID).pk})[0]
         instance.save()
 
         self.assertEqual(instance.remote_id, '%s_11374' % TOPIC_ID)
@@ -62,15 +69,19 @@ class VkontakteBoardTest(TestCase):
 
     def test_fetch_topics(self):
 
-        group = GroupFactory.create(remote_id=GROUP_ID)
+        group = GroupFactory(remote_id=GROUP_ID)
         group.fetch_topics()
 
         self.assertTrue(group.topics.count() > 10)
 
+        topics = group.fetch_topics(all=True, extended=True)
+
+        self.assertTrue(topics.count() > 10)
+
     def test_fetch_comments(self):
 
-        group = GroupFactory.create(remote_id=GROUP_ID)
-        topic = TopicFactory.create(remote_id=TOPIC_ID, group=group)
+        group = GroupFactory(remote_id=GROUP_ID)
+        topic = TopicFactory(remote_id=TOPIC_ID, group=group)
 
         comments = topic.fetch_comments(count=20, sort='desc')
         self.assertEqual(len(comments), topic.comments.count())
@@ -98,8 +109,8 @@ class VkontakteBoardTest(TestCase):
 
     def test_fetch_comments_of_deleted_topic(self):
 
-        group = GroupFactory.create(remote_id=17589818)
-        topic = TopicFactory.create(remote_id='-17589818_26390905', group=group)
+        group = GroupFactory(remote_id=17589818)
+        topic = TopicFactory(remote_id='-17589818_26390905', group=group)
 
         comments = topic.fetch_comments()
         self.assertEqual(topic.comments.count(), 0)

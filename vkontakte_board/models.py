@@ -21,53 +21,25 @@ class TopicManager(models.Manager):
 
 class BoardRemoteManager(VkontakteTimelineManager, ParseUsersMixin):
 
-    def parse_response(self, response, extra_fields=None):
-        if isinstance(response, dict):
-            self.parse_response_users(response)
-            return super(BoardRemoteManager, self).parse_response_list(response[self.response_instances_fieldname], extra_fields)
-        else:
-            raise VkontakteContentError('Vkontakte response should be dict')
+    def parse_response(self, response, *args, **kwargs):
+        self.parse_response_users(response)
+        return super(BoardRemoteManager, self).parse_response(response, *args, **kwargs)
 
 
 class TopicRemoteManager(BoardRemoteManager):
 
-    response_instances_fieldname = 'topics'
-
     @atomic
     @fetch_all(default_count=100)
     def fetch(self, group, ids=None, extended=False, order=None, offset=0, count=100, preview=0, preview_length=90, **kwargs):
-        #gid
-        #ID группы, список тем которой необходимо получить.
-        kwargs['gid'] = group.remote_id
-        #tids
-        #Список идентификаторов тем, которые необходимо получить (не более 100). По умолчанию возвращаются все темы. Если указан данный параметр, игнорируются параметры order, offset и count (возвращаются все запрошенные темы в указанном порядке).
+        kwargs['group_id'] = group.remote_id
         if ids and isinstance(ids, (list, tuple)):
-            kwargs['tids'] = ','.join(map(lambda i: str(i), ids))
-        #extended
-        #Если указать в качестве этого параметра 1, то будет возвращена информация о пользователях, являющихся создателями тем или оставившими в них последнее сообщение. По умолчанию 0.
+            kwargs['topic_ids'] = ','.join(map(lambda i: str(i), ids))
         kwargs['extended'] = int(extended)
-        #order
-        #Порядок, в котором необходимо вернуть список тем. Возможные значения:
-        #1 - по убыванию даты обновления,
-        #2 - по убыванию даты создания,
-        #-1 - по возрастанию даты обновления,
-        #-2 - по возрастанию даты создания.
-        #По умолчанию темы возвращаются в порядке, установленном администратором группы. "Прилепленные" темы при любой сортировке возвращаются первыми в списке.
         if order:
             kwargs['order'] = int(order)
-        #offset
-        #Смещение, необходимое для выборки определенного подмножества тем.
         kwargs['offset'] = int(offset)
-        #count
-        #Количество тем, которое необходимо получить (но не более 100). По умолчанию 40.
         kwargs['count'] = int(count)
-        #preview
-        #Набор флагов, определяющий, необходимо ли вернуть вместе с информацией о темах текст первых и последних сообщений в них. Является суммой флагов:
-        #1 - вернуть первое сообщение в каждой теме (поле first_comment),
-        #2 - вернуть последнее сообщение в каждой теме (поле last_comment). По умолчанию 0 (не возвращать текст сообщений).
         kwargs['preview'] = int(preview)
-        #preview_length
-        #Количество символов, по которому нужно обрезать первое и последнее сообщение. Укажите 0, если Вы не хотите обрезать сообщение. (по умолчанию 90).
         kwargs['preview_length'] = int(preview_length)
 
         kwargs['extra_fields'] = {'group_id': group.pk}
@@ -76,14 +48,12 @@ class TopicRemoteManager(BoardRemoteManager):
 
 class CommentRemoteManager(BoardRemoteManager):
 
-    response_instances_fieldname = 'comments'
-
     @atomic
     @fetch_all(default_count=100)
     def fetch(self, topic, extended=False, offset=0, count=100, sort='asc', need_likes=True, before=None, after=None, **kwargs):
         if count > 100:
             raise ValueError("Attribute 'count' can not be more than 100")
-        if sort not in ['asc','desc']:
+        if sort not in ['asc', 'desc']:
             raise ValueError("Attribute 'sort' should be equal to 'asc' or 'desc'")
         if sort == 'asc' and after:
             raise ValueError("Attribute `sort` should be equal to 'desc' with defined `after` attribute")
@@ -92,28 +62,12 @@ class CommentRemoteManager(BoardRemoteManager):
         if before and before < after:
             raise ValueError("Attribute `before` should be later, than attribute `after`")
 
-        #gid
-        #ID группы, к обсуждениям которой относится указанная тема.
-        kwargs['gid'] = topic.group.remote_id
-        #tid
-        #ID темы в группе
-        kwargs['tid'] = topic.remote_id.split('_')[1]
-        #extended
-        #Если указать в качестве этого параметра 1, то будет возвращена информация о пользователях, являющихся авторами сообщений. По умолчанию 0.
+        kwargs['group_id'] = topic.group.remote_id
+        kwargs['topic_id'] = topic.remote_id.split('_')[1]
         kwargs['extended'] = int(extended)
-        #offset
-        #Смещение, необходимое для выборки определенного подмножества сообщений.
         kwargs['offset'] = int(offset)
-        # sort
-        # порядок сортировки комментариев:
-        # asc - хронологический
-        # desc - антихронологический
         kwargs['sort'] = sort
-        #count
-        #Количество сообщений, которое необходимо получить (но не более 100). По умолчанию 20.
         kwargs['count'] = int(count)
-        # need_likes
-        # 1 - будет возвращено дополнительное поле likes. По умолчанию поле likes не возвращается.
         kwargs['need_likes'] = int(need_likes)
 
         # special parameters
@@ -146,8 +100,6 @@ class BoardAbstractModel(VkontakteModel):
 @python_2_unicode_compatible
 class Topic(BoardAbstractModel):
 
-    remote_pk_field = 'tid'
-
     group = models.ForeignKey(Group, verbose_name=u'Группа', related_name='topics')
 
     title = models.CharField(u'Заголовок', max_length=500)
@@ -166,7 +118,7 @@ class Topic(BoardAbstractModel):
     last_comment = models.TextField(u'Текст последнего сообщения')
 
     objects = TopicManager()
-    remote = TopicRemoteManager(remote_pk=('remote_id',), methods={
+    remote = TopicRemoteManager(remote_pk=('remote_id',), version=5.8, methods={
         'get': 'getTopics',
     })
 
@@ -209,7 +161,7 @@ class Comment(BoardAbstractModel):
 #    likes = models.PositiveIntegerField(u'Кол-во лайков', default=0)
 
     objects = CommentManager()
-    remote = CommentRemoteManager(remote_pk=('remote_id',), methods={
+    remote = CommentRemoteManager(remote_pk=('remote_id',), version=5.8, methods={
         'get': 'getComments',
     })
 
